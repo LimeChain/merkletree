@@ -27,25 +27,28 @@ type Node struct {
 	Parent *Node
 }
 
+func (n Node) String() string {
+	return n.Hash.Hex()
+}
+
 type MerkleTree struct {
-	Leafs []*Node
-	Nodes [][]*Node
-	Root  *Node
+	nodes [][]*Node
+	root  *Node
 }
 
 func (tree *MerkleTree) init() {
-	tree.Nodes = make([][]*Node, 1)
+	tree.nodes = make([][]*Node, 1)
 }
 
 func (tree *MerkleTree) resize() {
-	leafs := len(tree.Nodes[0])
-	levels := len(tree.Nodes)
+	leafs := len(tree.nodes[0])
+	levels := len(tree.nodes)
 	neededLevels := int(math.Ceil(math.Log2(float64(leafs)))) + 1
 
 	if levels < neededLevels {
 		n := make([][]*Node, neededLevels)
-		copy(n, tree.Nodes)
-		tree.Nodes = n
+		copy(n, tree.nodes)
+		tree.nodes = n
 
 		printf("MerkleTree resized to %v levels\n", neededLevels)
 	}
@@ -56,9 +59,9 @@ func (tree *MerkleTree) recalculate() (Root *Node) {
 
 	tree.resize()
 
-	levelCount := len(tree.Nodes[0])
+	levelCount := len(tree.nodes[0])
 	level := 0
-	tree.Nodes[level+1] = make([]*Node, (levelCount/2)+levelCount%2)
+	tree.nodes[level+1] = make([]*Node, (levelCount/2)+levelCount%2)
 
 	printf("=== N: %v ===\n", levelCount)
 	printf("Level: %v, Level count: %v\n", level, levelCount)
@@ -66,29 +69,30 @@ func (tree *MerkleTree) recalculate() (Root *Node) {
 	for i := 0; levelCount > 1; i += 2 {
 		var left, right *Node
 
-		left = tree.Nodes[level][i]
+		left = tree.nodes[level][i]
 
 		if i == levelCount-1 { // Odd Nodes level
-			right = tree.Nodes[level][i]
+			right = tree.nodes[level][i]
 		} else { // Even Nodes level
-			right = tree.Nodes[level][i+1]
+			right = tree.nodes[level][i+1]
 		}
 
 		node := Node{
 			Hash:   crypto.Keccak256Hash(left.Hash[:], right.Hash[:]),
 			Parent: nil,
+			Index:  i / 2,
 		}
 
 		left.Parent = &node
 		right.Parent = &node
 
-		tree.Nodes[level+1][i/2] = &node
+		tree.nodes[level+1][i/2] = &node
 
 		if i+2 >= levelCount {
 			levelCount = (levelCount / 2) + levelCount%2
 			level++
 			if levelCount > 1 {
-				tree.Nodes[level+1] = make([]*Node, (levelCount/2)+levelCount%2)
+				tree.nodes[level+1] = make([]*Node, (levelCount/2)+levelCount%2)
 				i = -2
 			}
 
@@ -98,23 +102,23 @@ func (tree *MerkleTree) recalculate() (Root *Node) {
 
 	printf("====\n")
 
-	return tree.Nodes[level][0]
+	return tree.nodes[level][0]
 }
 
 func (tree *MerkleTree) getNodeSibling(level int, index int) *Node {
-	node := len(tree.Nodes[level])
+	node := len(tree.nodes[level])
 	if index >= node {
 		// TODO throw error
 	}
 	if index%2 == 1 {
-		return tree.Nodes[level][index-1]
+		return tree.nodes[level][index-1]
 	}
 
 	if index == node-1 {
-		return tree.Nodes[level][index]
+		return tree.nodes[level][index]
 	}
 
-	return tree.Nodes[level][index+1]
+	return tree.nodes[level][index+1]
 }
 
 func (tree *MerkleTree) getLeafSibling(index int) *Node {
@@ -124,13 +128,13 @@ func (tree *MerkleTree) getLeafSibling(index int) *Node {
 func (tree MerkleTree) String() string {
 	b := strings.Builder{}
 
-	l := len(tree.Nodes)
+	l := len(tree.nodes)
 
 	for i := l - 1; i >= 0; i-- {
-		ll := len(tree.Nodes[i])
+		ll := len(tree.nodes[i])
 		b.WriteString(fmt.Sprintf("Level: %v, Count: %v\n", i, ll))
 		for k := 0; k < ll; k++ {
-			b.WriteString(fmt.Sprintf("%v\t", tree.Nodes[i][k].Hash.Hex()))
+			b.WriteString(fmt.Sprintf("%v\t", tree.nodes[i][k].Hash.Hex()))
 		}
 		b.WriteString("\n")
 	}
@@ -138,35 +142,31 @@ func (tree MerkleTree) String() string {
 	return b.String()
 }
 
-func (tree *MerkleTree) Add(data []byte) (index int, leaf *Node, root *Node) {
-	index = len(tree.Nodes[0])
+func (tree *MerkleTree) Add(data []byte) (index int, hash string) {
+	index = len(tree.nodes[0])
 
-	leaf = &(Node{
+	leaf := &(Node{
 		index,
 		crypto.Keccak256Hash(data),
 		nil,
 	})
 
-	tree.Nodes[0] = append(tree.Nodes[0], leaf)
+	tree.nodes[0] = append(tree.nodes[0], leaf)
 
 	if index == 0 {
-		tree.Root = leaf
-		return index, leaf, tree.Root
+		tree.root = leaf
+	} else {
+		tree.root = tree.recalculate()
 	}
-
-	root = tree.recalculate()
-	tree.Root = root
-	tree.Leafs = tree.Nodes[0]
-
-	return index, leaf, leaf
+	return index, leaf.String()
 }
 
 func (tree *MerkleTree) getIntermediaryHashesByIndex(index int) (intermediaryHashes []*Node) {
-	leafs := len(tree.Nodes[0])
+	leafs := len(tree.nodes[0])
 	if index >= leafs {
 		// TODO throw error
 	}
-	levels := len(tree.Nodes)
+	levels := len(tree.nodes)
 	if levels < 2 {
 		return make([]*Node, 0)
 	}
@@ -175,7 +175,7 @@ func (tree *MerkleTree) getIntermediaryHashesByIndex(index int) (intermediaryHas
 	intermediaryHashes[0] = tree.getLeafSibling(index)
 	index /= 2
 
-	node := tree.Nodes[0][index].Parent
+	node := tree.nodes[0][index].Parent
 	level := 1
 	for node.Parent != nil {
 		intermediaryHashes = append(intermediaryHashes, tree.getNodeSibling(level, index))
@@ -200,7 +200,7 @@ func (tree *MerkleTree) IntermediaryHashesByIndex(index int) (intermediaryHashes
 func (tree *MerkleTree) ValidateExistance(original []byte, index int, intermediaryHashes []string) bool {
 	leafHash := crypto.Keccak256Hash(original)
 
-	treeLeaf := tree.Nodes[0][index]
+	treeLeaf := tree.nodes[0][index]
 
 	if leafHash.Big().Cmp(treeLeaf.Hash.Big()) != 0 {
 		return false
@@ -220,8 +220,21 @@ func (tree *MerkleTree) ValidateExistance(original []byte, index int, intermedia
 		index /= 2
 	}
 
-	return tempBHash.Big().Cmp(tree.Root.Hash.Big()) == 0
+	return tempBHash.Big().Cmp(tree.root.Hash.Big()) == 0
 
+}
+
+func (tree *MerkleTree) Root() string {
+	return tree.root.String()
+}
+
+func (tree *MerkleTree) Length() uint {
+	return uint(len(tree.nodes[0]))
+}
+
+func (tree *MerkleTree) MarshalJSON() ([]byte, error) {
+	res := fmt.Sprintf("{\"root\":\"%v\", \"length\":%v}", tree.Root(), tree.Length())
+	return []byte(res), nil
 }
 
 func New() *MerkleTree {
