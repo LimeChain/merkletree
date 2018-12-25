@@ -36,6 +36,7 @@ func (n StandardNode) String() string {
 	return n.hash.Hex()
 }
 
+// StandardMerkleTree is the most basic implementation of a MerkleTree
 type StandardMerkleTree struct {
 	nodes [][]*StandardNode
 	root  *StandardNode
@@ -156,6 +157,9 @@ func (tree *StandardMerkleTree) getIntermediaryHashesByIndex(index int) (interme
 	return intermediaryHashes
 }
 
+// Add hashes and inserts data on the next available slot in the tree.
+// Also recalculates and recalibrates the tree.
+// Returns the index it was inserted and the hash of the new data
 func (tree *StandardMerkleTree) Add(data []byte) (index int, hash string) {
 	index = len(tree.nodes[0])
 
@@ -172,19 +176,24 @@ func (tree *StandardMerkleTree) Add(data []byte) (index int, hash string) {
 	} else {
 		tree.root = tree.recalculate()
 	}
-	return index, leaf.String()
+	return index, leaf.Hash()
 }
 
+// IntermediaryHashesByIndex returns all hashes needed to produce the root from the comming index
 func (tree *StandardMerkleTree) IntermediaryHashesByIndex(index int) (intermediaryHashes []string) {
 	hashes := tree.getIntermediaryHashesByIndex(index)
 	intermediaryHashes = make([]string, len(hashes))
 	for i, h := range hashes {
-		intermediaryHashes[i] = h.hash.Hex()
+		intermediaryHashes[i] = h.Hash()
 	}
 
 	return intermediaryHashes
 }
 
+// ValidateExistence emulates how third party would validate the data
+// Given original data, the index it is supposed to be and the intermediaryHashes to the root
+// Validates that this is the correct data for that slot
+// In production you can just check the HashAt and hash the original data yourself
 func (tree *StandardMerkleTree) ValidateExistence(original []byte, index int, intermediaryHashes []string) bool {
 	leafHash := crypto.Keccak256Hash(original)
 
@@ -212,14 +221,17 @@ func (tree *StandardMerkleTree) ValidateExistence(original []byte, index int, in
 
 }
 
+// Root returns the hash of the root of the tree
 func (tree *StandardMerkleTree) Root() string {
-	return tree.root.String()
+	return tree.root.Hash()
 }
 
-func (tree *StandardMerkleTree) Length() uint {
-	return uint(len(tree.nodes[0]))
+// Length returns the count of the tree leafs
+func (tree *StandardMerkleTree) Length() int {
+	return len(tree.nodes[0])
 }
 
+// String returns human readable version of the tree
 func (tree StandardMerkleTree) String() string {
 	b := strings.Builder{}
 
@@ -229,7 +241,7 @@ func (tree StandardMerkleTree) String() string {
 		ll := len(tree.nodes[i])
 		b.WriteString(fmt.Sprintf("Level: %v, Count: %v\n", i, ll))
 		for k := 0; k < ll; k++ {
-			b.WriteString(fmt.Sprintf("%v\t", tree.nodes[i][k].hash.Hex()))
+			b.WriteString(fmt.Sprintf("%v\t", tree.nodes[i][k].Hash()))
 		}
 		b.WriteString("\n")
 	}
@@ -237,11 +249,23 @@ func (tree StandardMerkleTree) String() string {
 	return b.String()
 }
 
+// HashAt returns the hash at given index
+func (tree *StandardMerkleTree) HashAt(index int) string {
+	leafs := len(tree.nodes[0])
+	if index >= leafs {
+		// TODO throw error
+	}
+
+	return tree.nodes[0][index].Hash()
+}
+
+// MarshalJSON Creates JSON version of the needed fields of the tree
 func (tree *StandardMerkleTree) MarshalJSON() ([]byte, error) {
 	res := fmt.Sprintf("{\"root\":\"%v\", \"length\":%v}", tree.Root(), tree.Length())
 	return []byte(res), nil
 }
 
+// NewTree returns a pointer to an initialized StandardMerkleTree
 func NewTree() merkletree.MerkleTree {
 	var tree StandardMerkleTree
 	tree.init()
