@@ -112,15 +112,12 @@ func (tree *StandardMerkleTree) recalculate() (Root *StandardNode) {
 }
 
 func (tree *StandardMerkleTree) getNodeSibling(level int, index int) *StandardNode {
-	node := len(tree.nodes[level])
-	if index >= node {
-		// TODO throw error
-	}
+	nodesCount := len(tree.nodes[level])
 	if index%2 == 1 {
 		return tree.nodes[level][index-1]
 	}
 
-	if index == node-1 {
+	if index == nodesCount-1 {
 		return tree.nodes[level][index]
 	}
 
@@ -132,10 +129,6 @@ func (tree *StandardMerkleTree) getLeafSibling(index int) *StandardNode {
 }
 
 func (tree *StandardMerkleTree) getIntermediaryHashesByIndex(index int) (intermediaryHashes []*StandardNode) {
-	leafs := len(tree.nodes[0])
-	if index >= leafs {
-		// TODO throw error
-	}
 	levels := len(tree.nodes)
 	if levels < 2 {
 		return make([]*StandardNode, 0)
@@ -251,11 +244,6 @@ func (tree StandardMerkleTree) String() string {
 
 // HashAt returns the hash at given index
 func (tree *StandardMerkleTree) HashAt(index int) string {
-	leafs := len(tree.nodes[0])
-	if index >= leafs {
-		// TODO throw error
-	}
-
 	return tree.nodes[0][index].Hash()
 }
 
