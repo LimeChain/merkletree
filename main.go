@@ -4,11 +4,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"tree/merkletree"
+	StandardMerkleTree "tree/merkletree/standard"
 )
 
 func main() {
 	elements := 25
-	tree := merkletree.New()
+	var tree merkletree.MerkleTree
+	tree = StandardMerkleTree.New()
 	for i := 0; i < elements; i++ {
 		tree.Add([]byte("hello" + string(i)))
 	}
@@ -20,8 +22,8 @@ func main() {
 	intermediaryHashes := tree.IntermediaryHashesByIndex(index)
 
 	fmt.Println(tree)
-	fmt.Printf("%v exists in the tree: %v\n", string(rawData), tree.ValidateExistance(rawData, index, intermediaryHashes))
-	fmt.Printf("%v exists in the tree: %v\n", string(rawData[:7]), tree.ValidateExistance(rawData[:7], index, intermediaryHashes))
+	fmt.Printf("%v exists in the tree: %v\n", string(rawData), tree.ValidateExistence(rawData, index, intermediaryHashes))
+	fmt.Printf("%v exists in the tree: %v\n", string(rawData[:7]), tree.ValidateExistence(rawData[:7], index, intermediaryHashes))
 
 	bs, err := json.Marshal(tree)
 	if err != nil {
