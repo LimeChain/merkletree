@@ -3,14 +3,12 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"tree/merkletree"
 	StandardMerkleTree "tree/merkletree/standard"
 )
 
 func main() {
 	elements := 25
-	var tree merkletree.MerkleTree
-	tree = StandardMerkleTree.New()
+	tree := StandardMerkleTree.NewTree()
 	for i := 0; i < elements; i++ {
 		tree.Add([]byte("hello" + string(i)))
 	}

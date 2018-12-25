@@ -6,6 +6,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"math"
 	"strings"
+	"tree/merkletree"
 )
 
 var debug = false
@@ -25,6 +26,10 @@ type StandardNode struct {
 
 func (node *StandardNode) Hash() string {
 	return node.hash.Hex()
+}
+
+func (node *StandardNode) Index() int {
+	return node.index
 }
 
 func (n StandardNode) String() string {
@@ -237,7 +242,7 @@ func (tree *StandardMerkleTree) MarshalJSON() ([]byte, error) {
 	return []byte(res), nil
 }
 
-func New() *StandardMerkleTree {
+func NewTree() merkletree.MerkleTree {
 	var tree StandardMerkleTree
 	tree.init()
 
