@@ -6,6 +6,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"math"
 	"strings"
+	"sync"
 	"tree/merkletree"
 )
 
@@ -40,6 +41,7 @@ func (n StandardNode) String() string {
 type StandardMerkleTree struct {
 	nodes [][]*StandardNode
 	root  *StandardNode
+	mutex sync.RWMutex
 }
 
 func (tree *StandardMerkleTree) init() {
@@ -154,6 +156,7 @@ func (tree *StandardMerkleTree) getIntermediaryHashesByIndex(index int) (interme
 // Also recalculates and recalibrates the tree.
 // Returns the index it was inserted and the hash of the new data
 func (tree *StandardMerkleTree) Add(data []byte) (index int, hash string) {
+	tree.mutex.RLock()
 	index = len(tree.nodes[0])
 
 	leaf := &(StandardNode{
@@ -169,6 +172,7 @@ func (tree *StandardMerkleTree) Add(data []byte) (index int, hash string) {
 	} else {
 		tree.root = tree.recalculate()
 	}
+	tree.mutex.RUnlock()
 	return index, leaf.Hash()
 }
 
