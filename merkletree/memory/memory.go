@@ -62,7 +62,7 @@ func (tree *MemoryMerkleTree) resizeVertically() {
 
 }
 
-func (tree *MemoryMerkleTree) recalculate() (root *MemoryNode) {
+func (tree *MemoryMerkleTree) propagateChange() (root *MemoryNode) {
 
 	tree.resizeVertically()
 
@@ -70,38 +70,50 @@ func (tree *MemoryMerkleTree) recalculate() (root *MemoryNode) {
 
 	printf("Levels %v\n", levels)
 
-	for i := 0; i < (levels - 1); i++ {
-		var left, right *MemoryNode
-
-		levelLen := len(tree.Nodes[i])
-		addedNode := tree.Nodes[i][levelLen-1]
-
-		right = addedNode
-		if levelLen%2 == 0 {
-			left = tree.Nodes[i][levelLen-2]
-		} else {
-			left = addedNode
+	lastNodeSibling := func(nodes []*MemoryNode, length int) *MemoryNode {
+		if length%2 == 0 {
+			// The added node completed a pair - take the other half
+			return nodes[length-2]
 		}
+		// The added node created new pair - duplicate itself
+		return nodes[length-1]
+	}
 
-		parentIndex := (levelLen - 1) / 2
+	createParent := func(left, right *MemoryNode) *MemoryNode {
 		parentNode := &MemoryNode{
 			hash:   crypto.Keccak256Hash(left.hash[:], right.hash[:]),
 			Parent: nil,
-			index:  parentIndex,
+			index:  right.index / 2, // Parent index is always the current node index divided by two
 		}
 
 		left.Parent = parentNode
 		right.Parent = parentNode
 
-		nextLevelLen := len(tree.Nodes[i+1])
-		if parentIndex < nextLevelLen {
-			tree.Nodes[i+1][parentIndex] = parentNode
+		return parentNode
+	}
+
+	updateParentLevel := func(parent *MemoryNode, parentLevel []*MemoryNode) {
+		nextLevelLen := len(parentLevel)
+		if parent.index == nextLevelLen { // If the leafs are now odd, The parent needs to expand the level
+			parentLevel = append(parentLevel, parent)
 		} else {
-			tree.Nodes[i+1] = append(tree.Nodes[i+1], parentNode)
+			parentLevel[parent.index] = parent // If the leafs are now even, The parent is just replaced
 		}
+	}
+
+	for i := 0; i < (levels - 1); i++ {
+		var left, right *MemoryNode
+
+		levelLen := len(tree.Nodes[i])
+
+		right = tree.Nodes[i][levelLen-1]               // Last inserted node
+		left = lastNodeSibling(tree.Nodes[i], levelLen) // Either the other half or himself
+
+		parentNode := createParent(left, right) // Create parent hashing the two
+
+		updateParentLevel(parentNode, tree.Nodes[i+1]) // Update the parent level
 
 		printf("Level: %v, Level count: %v\n", i, levelLen)
-
 	}
 
 	printf("====\n")
@@ -168,7 +180,7 @@ func (tree *MemoryMerkleTree) Add(data []byte) (index int, hash string) {
 	if index == 0 {
 		tree._Root = leaf
 	} else {
-		tree._Root = tree.recalculate()
+		tree._Root = tree.propagateChange()
 	}
 	tree.mutex.RUnlock()
 	return index, leaf.Hash()
