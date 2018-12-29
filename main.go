@@ -3,14 +3,17 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	StandardMerkleTree "tree/merkletree/standard"
+	"strconv"
+	"tree/merkletree"
+	postgresTree "tree/merkletree/postgres"
 )
 
 func main() {
 	elements := 25
-	tree := StandardMerkleTree.NewTree()
+	var tree merkletree.MerkleTree
+	tree = postgresTree.NewTree()
 	for i := 0; i < elements; i++ {
-		tree.Add([]byte("hello" + string(i)))
+		tree.Add([]byte("hello" + strconv.Itoa(i)))
 	}
 
 	tree.Add(make([]byte, 1024*1024))
