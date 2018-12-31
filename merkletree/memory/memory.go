@@ -1,6 +1,7 @@
 package memory
 
 import (
+	"errors"
 	"fmt"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -10,6 +11,10 @@ import (
 )
 
 var debug = false
+
+const (
+	OUT_OF_BOUNDS = "Incorrect index - Index out of bounds"
+)
 
 func printf(format string, a ...interface{}) {
 	if !debug {
@@ -92,13 +97,15 @@ func (tree *MemoryMerkleTree) propagateChange() (root *MemoryNode) {
 		return parentNode
 	}
 
-	updateParentLevel := func(parent *MemoryNode, parentLevel []*MemoryNode) {
+	updateParentLevel := func(parent *MemoryNode, parentLevel []*MemoryNode) []*MemoryNode {
 		nextLevelLen := len(parentLevel)
 		if parent.index == nextLevelLen { // If the leafs are now odd, The parent needs to expand the level
 			parentLevel = append(parentLevel, parent)
 		} else {
 			parentLevel[parent.index] = parent // If the leafs are now even, The parent is just replaced
 		}
+
+		return parentLevel
 	}
 
 	for i := 0; i < (levels - 1); i++ {
@@ -111,7 +118,7 @@ func (tree *MemoryMerkleTree) propagateChange() (root *MemoryNode) {
 
 		parentNode := createParent(left, right) // Create parent hashing the two
 
-		updateParentLevel(parentNode, tree.Nodes[i+1]) // Update the parent level
+		tree.Nodes[i+1] = updateParentLevel(parentNode, tree.Nodes[i+1]) // Update the parent level
 
 		printf("Level: %v, Level count: %v\n", i, levelLen)
 	}
@@ -187,27 +194,33 @@ func (tree *MemoryMerkleTree) Add(data []byte) (index int, hash string) {
 }
 
 // IntermediaryHashesByIndex returns all hashes needed to produce the root from the comming index
-func (tree *MemoryMerkleTree) IntermediaryHashesByIndex(index int) (intermediaryHashes []string) {
+func (tree *MemoryMerkleTree) IntermediaryHashesByIndex(index int) (intermediaryHashes []string, err error) {
+	if index >= len(tree.Nodes[0]) {
+		return nil, errors.New(OUT_OF_BOUNDS)
+	}
 	hashes := tree.getIntermediaryHashesByIndex(index)
 	intermediaryHashes = make([]string, len(hashes))
 	for i, h := range hashes {
 		intermediaryHashes[i] = h.Hash()
 	}
 
-	return intermediaryHashes
+	return intermediaryHashes, nil
 }
 
 // ValidateExistence emulates how third party would validate the data
 // Given original data, the index it is supposed to be and the intermediaryHashes to the root
 // Validates that this is the correct data for that slot
 // In production you can just check the HashAt and hash the original data yourself
-func (tree *MemoryMerkleTree) ValidateExistence(original []byte, index int, intermediaryHashes []string) bool {
+func (tree *MemoryMerkleTree) ValidateExistence(original []byte, index int, intermediaryHashes []string) (result bool, err error) {
+	if index >= len(tree.Nodes[0]) {
+		return false, errors.New(OUT_OF_BOUNDS)
+	}
 	leafHash := crypto.Keccak256Hash(original)
 
 	treeLeaf := tree.Nodes[0][index]
 
 	if leafHash.Big().Cmp(treeLeaf.hash.Big()) != 0 {
-		return false
+		return false, nil
 	}
 
 	tempBHash := leafHash
@@ -224,7 +237,7 @@ func (tree *MemoryMerkleTree) ValidateExistence(original []byte, index int, inte
 		index /= 2
 	}
 
-	return tempBHash.Big().Cmp(tree._Root.hash.Big()) == 0
+	return tempBHash.Big().Cmp(tree._Root.hash.Big()) == 0, nil
 
 }
 
@@ -239,7 +252,7 @@ func (tree *MemoryMerkleTree) Length() int {
 }
 
 // String returns human readable version of the tree
-func (tree MemoryMerkleTree) String() string {
+func (tree *MemoryMerkleTree) String() string {
 	b := strings.Builder{}
 
 	l := len(tree.Nodes)
@@ -257,8 +270,11 @@ func (tree MemoryMerkleTree) String() string {
 }
 
 // HashAt returns the hash at given index
-func (tree *MemoryMerkleTree) HashAt(index int) string {
-	return tree.Nodes[0][index].Hash()
+func (tree *MemoryMerkleTree) HashAt(index int) (string, error) {
+	if index >= len(tree.Nodes[0]) {
+		return "", errors.New(OUT_OF_BOUNDS)
+	}
+	return tree.Nodes[0][index].Hash(), nil
 }
 
 // MarshalJSON Creates JSON version of the needed fields of the tree

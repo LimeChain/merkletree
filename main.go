@@ -3,33 +3,64 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/go-chi/chi"
+	"github.com/go-chi/chi/middleware"
+	"github.com/go-chi/render"
+	"log"
+	"net/http"
 	"strconv"
 	"tree/merkletree"
 	postgresTree "tree/merkletree/postgres"
+	merkleRestAPI "tree/merkletree/restapi"
 )
 
+func createAndStartAPI(tree merkletree.MarshalledMerkleTree) {
+	router := chi.NewRouter()
+	router.Use(
+		render.SetContentType(render.ContentTypeJSON),
+		middleware.Logger,
+		middleware.DefaultCompress,
+		middleware.RedirectSlashes,
+		middleware.Recoverer,
+	)
+
+	router.Route("/v1", func(r chi.Router) {
+		treeRouter := chi.NewRouter()
+		treeRouter = merkleRestAPI.MerkleTreeStatus(treeRouter, tree)
+		treeRouter = merkleRestAPI.MerkleTreeInsert(treeRouter, tree)
+		treeRouter = merkleRestAPI.MerkleTreeHashes(treeRouter, tree)
+		r.Mount("/api/merkletree", treeRouter)
+	})
+
+	log.Fatal(http.ListenAndServe(":8080", router))
+}
+
 func main() {
-	elements := 25
-	var tree merkletree.MerkleTree
-	tree = postgresTree.NewTree()
-	for i := 0; i < elements; i++ {
-		tree.Add([]byte("hello" + strconv.Itoa(i)))
-	}
+	// elements := 1000000
+	tree := postgresTree.NewTree()
+	// for i := 0; i < elements; i++ {
+	// 	tree.Add([]byte("hello" + strconv.Itoa(i)))
+	// }
 
-	tree.Add(make([]byte, 1024*1024))
+	// tree.Add(make([]byte, 1024*1024))
 
-	rawData := []byte("Ogi e Majstor")
-	index, _ := tree.Add(rawData)
-	intermediaryHashes := tree.IntermediaryHashesByIndex(index)
+	// rawData := []byte("Ogi e Majstor")
+	// index, _ := tree.Add(rawData)
+	// intermediaryHashes, err := tree.IntermediaryHashesByIndex(index)
+	// if err != nil {
+	// 	fmt.Println(err)
+	// }
+	// s, _ := tree.ValidateExistence(rawData, index, intermediaryHashes)
+	// fmt.Printf("%v exists in the tree: %v\n", string(rawData), s)
+	// s, _ = tree.ValidateExistence(rawData[:7], index, intermediaryHashes)
+	// fmt.Printf("%v exists in the tree: %v\n", string(rawData[:7]), s)
 
-	fmt.Println(tree)
-	fmt.Printf("%v exists in the tree: %v\n", string(rawData), tree.ValidateExistence(rawData, index, intermediaryHashes))
-	fmt.Printf("%v exists in the tree: %v\n", string(rawData[:7]), tree.ValidateExistence(rawData[:7], index, intermediaryHashes))
+	// bs, err := json.Marshal(tree)
+	// if err != nil {
+	// 	fmt.Println(err)
+	// }
+	// fmt.Println(string(bs))
 
-	bs, err := json.Marshal(tree)
-	if err != nil {
-		fmt.Println(err)
-	}
-	fmt.Println(string(bs))
+	createAndStartAPI(tree)
 
 }
