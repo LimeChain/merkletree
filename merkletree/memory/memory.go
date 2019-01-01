@@ -48,9 +48,9 @@ func (node Node) String() string {
 
 // MerkleTree is the most basic implementation of a MerkleTree
 type MerkleTree struct {
-	Nodes [][]*Node
-	_Root *Node
-	mutex sync.RWMutex
+	Nodes    [][]*Node
+	RootNode *Node
+	mutex    sync.RWMutex
 }
 
 func (tree *MerkleTree) init() {
@@ -190,9 +190,9 @@ func (tree *MerkleTree) Add(data []byte) (index int, hash string) {
 	tree.Nodes[0] = append(tree.Nodes[0], leaf)
 
 	if index == 0 {
-		tree._Root = leaf
+		tree.RootNode = leaf
 	} else {
-		tree._Root = tree.propagateChange()
+		tree.RootNode = tree.propagateChange()
 	}
 	tree.mutex.RUnlock()
 	return index, leaf.Hash()
@@ -242,13 +242,13 @@ func (tree *MerkleTree) ValidateExistence(original []byte, index int, intermedia
 		index /= 2
 	}
 
-	return tempBHash.Big().Cmp(tree._Root.hash.Big()) == 0, nil
+	return tempBHash.Big().Cmp(tree.RootNode.hash.Big()) == 0, nil
 
 }
 
 // Root returns the hash of the root of the tree
 func (tree *MerkleTree) Root() string {
-	return tree._Root.Hash()
+	return tree.RootNode.Hash()
 }
 
 // Length returns the count of the tree leafs
