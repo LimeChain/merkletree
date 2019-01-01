@@ -1,32 +1,31 @@
 package postgres
 
 import (
-	memory "tree/merkletree/memory"
+	"tree/merkletree"
 )
 
 type PostgresMerkleTree struct {
-	*memory.MemoryMerkleTree
+	merkletree.MarshalledMerkleTree
 }
 
 func (tree *PostgresMerkleTree) Add(data []byte) (index int, hash string) {
 	// TODO add saving to database
-	index, hash = tree.MemoryMerkleTree.Add(data)
+	index, hash = tree.MarshalledMerkleTree.Add(data)
 	return index, hash
 }
 
-// NewTree returns a pointer to an initialized PostgresMerkleTree
-func NewTree() *PostgresMerkleTree {
-
-	memoryTree := memory.NewTree()
+// NewMerkleTree takes an implementation of Merkle tree and augments it with saving data to postgres database
+// returns a pointer to an initialized PostgresMerkleTree
+func NewMerkleTree(tree merkletree.MarshalledMerkleTree) *PostgresMerkleTree {
 
 	postgresMemoryTree := PostgresMerkleTree{}
 
-	postgresMemoryTree.MemoryMerkleTree = memoryTree
+	postgresMemoryTree.MarshalledMerkleTree = tree
 
 	return &postgresMemoryTree
 }
 
-// TODO load from database
-func LoadTree() *PostgresMerkleTree {
-	return NewTree()
+func LoadMerkleTree(tree merkletree.MarshalledMerkleTree) *PostgresMerkleTree {
+	// TODO load from database
+	return NewMerkleTree(tree)
 }

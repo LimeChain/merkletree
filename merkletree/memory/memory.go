@@ -1,3 +1,4 @@
+// Package memory implements merkle tree stored in the memory of the system
 package memory
 
 import (
@@ -13,7 +14,7 @@ import (
 var debug = false
 
 const (
-	OUT_OF_BOUNDS = "Incorrect index - Index out of bounds"
+	outOfBounds = "Incorrect index - Index out of bounds"
 )
 
 func printf(format string, a ...interface{}) {
@@ -23,51 +24,55 @@ func printf(format string, a ...interface{}) {
 	fmt.Printf(format, a...)
 }
 
-type MemoryNode struct {
+// Node is implementation of types.Node and representation of a single node or leaf in the merkle tree
+type Node struct {
 	hash   common.Hash
 	index  int
-	Parent *MemoryNode
+	Parent *Node
 }
 
-func (node *MemoryNode) Hash() string {
+// Hash returns the string representation of the hash of the node
+func (node *Node) Hash() string {
 	return node.hash.Hex()
 }
 
-func (node *MemoryNode) Index() int {
+// Index returns the index of this node in its level
+func (node *Node) Index() int {
 	return node.index
 }
 
-func (n MemoryNode) String() string {
-	return n.hash.Hex()
+// String returns the hash of this node. Alias to Hash()
+func (node Node) String() string {
+	return node.Hash()
 }
 
-// MemoryMerkleTree is the most basic implementation of a MemoryMerkleTree
-type MemoryMerkleTree struct {
-	Nodes [][]*MemoryNode
-	_Root *MemoryNode
+// MerkleTree is the most basic implementation of a MerkleTree
+type MerkleTree struct {
+	Nodes [][]*Node
+	_Root *Node
 	mutex sync.RWMutex
 }
 
-func (tree *MemoryMerkleTree) init() {
-	tree.Nodes = make([][]*MemoryNode, 1)
+func (tree *MerkleTree) init() {
+	tree.Nodes = make([][]*Node, 1)
 }
 
-func (tree *MemoryMerkleTree) resizeVertically() {
+func (tree *MerkleTree) resizeVertically() {
 	leafs := len(tree.Nodes[0])
 	levels := len(tree.Nodes)
 	neededLevels := int(math.Ceil(math.Log2(float64(leafs)))) + 1
 
 	if levels < neededLevels {
-		n := make([][]*MemoryNode, neededLevels)
+		n := make([][]*Node, neededLevels)
 		copy(n, tree.Nodes)
 		tree.Nodes = n
 
-		printf("MemoryMerkleTree resized to %v levels\n", neededLevels)
+		printf("MerkleTree resized to %v levels\n", neededLevels)
 	}
 
 }
 
-func (tree *MemoryMerkleTree) propagateChange() (root *MemoryNode) {
+func (tree *MerkleTree) propagateChange() (root *Node) {
 
 	tree.resizeVertically()
 
@@ -75,7 +80,7 @@ func (tree *MemoryMerkleTree) propagateChange() (root *MemoryNode) {
 
 	printf("Levels %v\n", levels)
 
-	lastNodeSibling := func(nodes []*MemoryNode, length int) *MemoryNode {
+	lastNodeSibling := func(nodes []*Node, length int) *Node {
 		if length%2 == 0 {
 			// The added node completed a pair - take the other half
 			return nodes[length-2]
@@ -84,8 +89,8 @@ func (tree *MemoryMerkleTree) propagateChange() (root *MemoryNode) {
 		return nodes[length-1]
 	}
 
-	createParent := func(left, right *MemoryNode) *MemoryNode {
-		parentNode := &MemoryNode{
+	createParent := func(left, right *Node) *Node {
+		parentNode := &Node{
 			hash:   crypto.Keccak256Hash(left.hash[:], right.hash[:]),
 			Parent: nil,
 			index:  right.index / 2, // Parent index is always the current node index divided by two
@@ -97,7 +102,7 @@ func (tree *MemoryMerkleTree) propagateChange() (root *MemoryNode) {
 		return parentNode
 	}
 
-	updateParentLevel := func(parent *MemoryNode, parentLevel []*MemoryNode) []*MemoryNode {
+	updateParentLevel := func(parent *Node, parentLevel []*Node) []*Node {
 		nextLevelLen := len(parentLevel)
 		if parent.index == nextLevelLen { // If the leafs are now odd, The parent needs to expand the level
 			parentLevel = append(parentLevel, parent)
@@ -109,7 +114,7 @@ func (tree *MemoryMerkleTree) propagateChange() (root *MemoryNode) {
 	}
 
 	for i := 0; i < (levels - 1); i++ {
-		var left, right *MemoryNode
+		var left, right *Node
 
 		levelLen := len(tree.Nodes[i])
 
@@ -130,7 +135,7 @@ func (tree *MemoryMerkleTree) propagateChange() (root *MemoryNode) {
 	return root
 }
 
-func (tree *MemoryMerkleTree) getNodeSibling(level int, index int) *MemoryNode {
+func (tree *MerkleTree) getNodeSibling(level int, index int) *Node {
 	nodesCount := len(tree.Nodes[level])
 	if index%2 == 1 {
 		return tree.Nodes[level][index-1]
@@ -143,16 +148,16 @@ func (tree *MemoryMerkleTree) getNodeSibling(level int, index int) *MemoryNode {
 	return tree.Nodes[level][index+1]
 }
 
-func (tree *MemoryMerkleTree) getLeafSibling(index int) *MemoryNode {
+func (tree *MerkleTree) getLeafSibling(index int) *Node {
 	return tree.getNodeSibling(0, index)
 }
 
-func (tree *MemoryMerkleTree) getIntermediaryHashesByIndex(index int) (intermediaryHashes []*MemoryNode) {
+func (tree *MerkleTree) getIntermediaryHashesByIndex(index int) (intermediaryHashes []*Node) {
 	levels := len(tree.Nodes)
 	if levels < 2 {
-		return make([]*MemoryNode, 0)
+		return make([]*Node, 0)
 	}
-	intermediaryHashes = make([]*MemoryNode, 1, levels-1)
+	intermediaryHashes = make([]*Node, 1, levels-1)
 
 	intermediaryHashes[0] = tree.getLeafSibling(index)
 	index /= 2
@@ -172,11 +177,11 @@ func (tree *MemoryMerkleTree) getIntermediaryHashesByIndex(index int) (intermedi
 // Add hashes and inserts data on the next available slot in the tree.
 // Also recalculates and recalibrates the tree.
 // Returns the index it was inserted and the hash of the new data
-func (tree *MemoryMerkleTree) Add(data []byte) (index int, hash string) {
+func (tree *MerkleTree) Add(data []byte) (index int, hash string) {
 	tree.mutex.RLock()
 	index = len(tree.Nodes[0])
 
-	leaf := &MemoryNode{
+	leaf := &Node{
 		crypto.Keccak256Hash(data),
 		index,
 		nil,
@@ -194,9 +199,9 @@ func (tree *MemoryMerkleTree) Add(data []byte) (index int, hash string) {
 }
 
 // IntermediaryHashesByIndex returns all hashes needed to produce the root from the comming index
-func (tree *MemoryMerkleTree) IntermediaryHashesByIndex(index int) (intermediaryHashes []string, err error) {
+func (tree *MerkleTree) IntermediaryHashesByIndex(index int) (intermediaryHashes []string, err error) {
 	if index >= len(tree.Nodes[0]) {
-		return nil, errors.New(OUT_OF_BOUNDS)
+		return nil, errors.New(outOfBounds)
 	}
 	hashes := tree.getIntermediaryHashesByIndex(index)
 	intermediaryHashes = make([]string, len(hashes))
@@ -211,9 +216,9 @@ func (tree *MemoryMerkleTree) IntermediaryHashesByIndex(index int) (intermediary
 // Given original data, the index it is supposed to be and the intermediaryHashes to the root
 // Validates that this is the correct data for that slot
 // In production you can just check the HashAt and hash the original data yourself
-func (tree *MemoryMerkleTree) ValidateExistence(original []byte, index int, intermediaryHashes []string) (result bool, err error) {
+func (tree *MerkleTree) ValidateExistence(original []byte, index int, intermediaryHashes []string) (result bool, err error) {
 	if index >= len(tree.Nodes[0]) {
-		return false, errors.New(OUT_OF_BOUNDS)
+		return false, errors.New(outOfBounds)
 	}
 	leafHash := crypto.Keccak256Hash(original)
 
@@ -242,17 +247,17 @@ func (tree *MemoryMerkleTree) ValidateExistence(original []byte, index int, inte
 }
 
 // Root returns the hash of the root of the tree
-func (tree *MemoryMerkleTree) Root() string {
+func (tree *MerkleTree) Root() string {
 	return tree._Root.Hash()
 }
 
 // Length returns the count of the tree leafs
-func (tree *MemoryMerkleTree) Length() int {
+func (tree *MerkleTree) Length() int {
 	return len(tree.Nodes[0])
 }
 
 // String returns human readable version of the tree
-func (tree *MemoryMerkleTree) String() string {
+func (tree *MerkleTree) String() string {
 	b := strings.Builder{}
 
 	l := len(tree.Nodes)
@@ -270,22 +275,22 @@ func (tree *MemoryMerkleTree) String() string {
 }
 
 // HashAt returns the hash at given index
-func (tree *MemoryMerkleTree) HashAt(index int) (string, error) {
+func (tree *MerkleTree) HashAt(index int) (string, error) {
 	if index >= len(tree.Nodes[0]) {
-		return "", errors.New(OUT_OF_BOUNDS)
+		return "", errors.New(outOfBounds)
 	}
 	return tree.Nodes[0][index].Hash(), nil
 }
 
 // MarshalJSON Creates JSON version of the needed fields of the tree
-func (tree *MemoryMerkleTree) MarshalJSON() ([]byte, error) {
+func (tree *MerkleTree) MarshalJSON() ([]byte, error) {
 	res := fmt.Sprintf("{\"root\":\"%v\", \"length\":%v}", tree.Root(), tree.Length())
 	return []byte(res), nil
 }
 
-// NewTree returns a pointer to an initialized MemoryMerkleTree
-func NewTree() *MemoryMerkleTree {
-	var tree MemoryMerkleTree
+// NewMerkleTree returns a pointer to an initialized MerkleTree
+func NewMerkleTree() *MerkleTree {
+	var tree MerkleTree
 	tree.init()
 
 	return &tree

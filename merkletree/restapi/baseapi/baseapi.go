@@ -1,4 +1,4 @@
-package restapi
+package baseapi
 
 import (
 	"github.com/go-chi/chi"

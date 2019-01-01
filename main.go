@@ -7,8 +7,9 @@ import (
 	"log"
 	"net/http"
 	"tree/merkletree"
-	postgresTree "tree/merkletree/postgres"
-	merkleRestAPI "tree/merkletree/restapi"
+	"tree/merkletree/memory"
+	"tree/merkletree/postgres"
+	merkleRestAPI "tree/merkletree/restapi/baseapi"
 )
 
 func createAndStartAPI(tree merkletree.MarshalledMerkleTree) {
@@ -34,7 +35,7 @@ func createAndStartAPI(tree merkletree.MarshalledMerkleTree) {
 
 func main() {
 	// elements := 1000000
-	tree := postgresTree.NewTree()
+	tree := postgres.NewMerkleTree(memory.NewMerkleTree())
 	// for i := 0; i < elements; i++ {
 	// 	tree.Add([]byte("hello" + strconv.Itoa(i)))
 	// }
