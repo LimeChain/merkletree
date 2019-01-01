@@ -1,14 +1,11 @@
 package main
 
 import (
-	"encoding/json"
-	"fmt"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/render"
 	"log"
 	"net/http"
-	"strconv"
 	"tree/merkletree"
 	postgresTree "tree/merkletree/postgres"
 	merkleRestAPI "tree/merkletree/restapi"
