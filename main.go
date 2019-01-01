@@ -1,15 +1,15 @@
 package main
 
 import (
+	"./merkletree"
+	"./merkletree/memory"
+	"./merkletree/postgres"
+	merkleRestAPI "./merkletree/restapi/baseapi"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/render"
 	"log"
 	"net/http"
-	"tree/merkletree"
-	"tree/merkletree/memory"
-	"tree/merkletree/postgres"
-	merkleRestAPI "tree/merkletree/restapi/baseapi"
 )
 
 func createAndStartAPI(tree merkletree.MarshalledMerkleTree) {

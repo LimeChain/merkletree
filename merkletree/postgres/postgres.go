@@ -1,7 +1,7 @@
 package postgres
 
 import (
-	"tree/merkletree"
+	"../../merkletree"
 )
 
 type PostgresMerkleTree struct {

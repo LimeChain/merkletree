@@ -1,12 +1,12 @@
 package baseapi
 
 import (
+	"../../../merkletree"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/render"
 	"io/ioutil"
 	"net/http"
 	"strconv"
-	"tree/merkletree"
 )
 
 // MerkleTreeStatus takes pointer to initialized router and the merkle tree and exposes Rest API routes for getting of status
