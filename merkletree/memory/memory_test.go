@@ -59,3 +59,36 @@ func TestAdd(t *testing.T) {
 	et.Assert(tree.Root() == expectedRoot, "The hash of the root was not correctly calculated")
 	et.Assert(len(tree.Nodes) == 3, "The tree did not grow to 2 levels")
 }
+
+func TestIntermediaryHashesByIndex(t *testing.T) {
+	et := merkletreetest.WrapTesting(t)
+	tree := NewMerkleTree()
+
+	_, err := tree.IntermediaryHashesByIndex(1)
+
+	et.Assert(err != nil, "Error was not thrown")
+	et.Assert(err.Error() == outOfBounds, "Error was not thrown")
+
+	data1 := []byte("First Leaf")
+	dh1 := crypto.Keccak256Hash(data1)
+
+	tree.Add(data1)
+
+	data2 := []byte("Second Leaf")
+	tree.Add(data2)
+
+	data3 := []byte("Third Leaf")
+	dh3 := crypto.Keccak256Hash(data3)
+	tree.Add(data3)
+
+	expectedHash0 := dh1.Hex()
+	expectedHash1 := crypto.Keccak256Hash(dh3[:], dh3[:]).Hex()
+
+	hashes, err := tree.IntermediaryHashesByIndex(1)
+
+	et.Assert(err == nil, "Error was thrown")
+	et.Assert(len(hashes) == 2, "Too many intermediary hashes were returned")
+	et.Assert(hashes[0] == expectedHash0, "Incorrect intermediary hash at level 0 "+expectedHash0)
+	et.Assert(hashes[1] == expectedHash1, "Incorrect intermediary hash at level 1 "+expectedHash0)
+
+}
