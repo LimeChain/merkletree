@@ -2,9 +2,10 @@ package baseapi
 
 import (
 	"../../../merkletree"
+	"encoding/json"
+	"fmt"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/render"
-	"io/ioutil"
 	"net/http"
 	"strconv"
 )
@@ -27,30 +28,31 @@ func MerkleTreeInsert(treeRouter *chi.Mux, tree merkletree.MerkleTree) *chi.Mux 
 	return treeRouter
 }
 
-type merkleAPIResponse struct {
+// MerkleAPIResponse represents the minimal response structure
+type MerkleAPIResponse struct {
 	Status bool   `json:"status"`
 	Error  string `json:"error,omitempty"`
 }
 
 type treeStatusResponse struct {
-	merkleAPIResponse
+	MerkleAPIResponse
 	Tree merkletree.MerkleTree `json:"tree"`
 }
 
 func getTreeStatus(tree merkletree.MarshalledMerkleTree) func(w http.ResponseWriter, r *http.Request) {
 	handler := func(w http.ResponseWriter, r *http.Request) {
 		if tree.Length() == 0 {
-			render.JSON(w, r, treeStatusResponse{merkleAPIResponse{true, ""}, nil})
+			render.JSON(w, r, treeStatusResponse{MerkleAPIResponse{true, ""}, nil})
 			return
 		}
-		render.JSON(w, r, treeStatusResponse{merkleAPIResponse{true, ""}, tree})
+		render.JSON(w, r, treeStatusResponse{MerkleAPIResponse{true, ""}, tree})
 		return
 	}
 	return handler
 }
 
 type intermediaryHashesResponse struct {
-	merkleAPIResponse
+	MerkleAPIResponse
 	Hashes []string `json:"hashes,omitempty"`
 }
 
@@ -58,35 +60,46 @@ func getIntermediaryHashesHandler(tree merkletree.MerkleTree) func(w http.Respon
 	handler := func(w http.ResponseWriter, r *http.Request) {
 		index, err := strconv.Atoi(chi.URLParam(r, "index"))
 		if err != nil {
-			render.JSON(w, r, intermediaryHashesResponse{merkleAPIResponse{false, err.Error()}, nil})
+			render.JSON(w, r, intermediaryHashesResponse{MerkleAPIResponse{false, err.Error()}, nil})
 			return
 		}
 		hashes, err := tree.IntermediaryHashesByIndex(index)
 		if err != nil {
-			render.JSON(w, r, intermediaryHashesResponse{merkleAPIResponse{false, err.Error()}, nil})
+			render.JSON(w, r, intermediaryHashesResponse{MerkleAPIResponse{false, err.Error()}, nil})
 			return
 		}
-		render.JSON(w, r, intermediaryHashesResponse{merkleAPIResponse{true, ""}, hashes})
+		render.JSON(w, r, intermediaryHashesResponse{MerkleAPIResponse{true, ""}, hashes})
 	}
 	return handler
 }
 
+type addDataRequest struct {
+	Data string `json:"data"`
+}
+
 type addDataResponse struct {
-	merkleAPIResponse
+	MerkleAPIResponse
 	Index int    `json:"index"`
 	Hash  string `json:"hash,omitempty"`
 }
 
 func addDataHandler(tree merkletree.MerkleTree) func(w http.ResponseWriter, r *http.Request) {
 	handler := func(w http.ResponseWriter, r *http.Request) {
-		data, err := ioutil.ReadAll(r.Body)
+		decoder := json.NewDecoder(r.Body)
+		var b addDataRequest
+		err := decoder.Decode(&b)
 		if err != nil {
-			render.JSON(w, r, addDataResponse{merkleAPIResponse{false, err.Error()}, -1, ""})
+			render.JSON(w, r, addDataResponse{MerkleAPIResponse{false, err.Error()}, -1, ""})
 			return
 		}
-		index, hash := tree.Add(data)
-		render.JSON(w, r, addDataResponse{merkleAPIResponse{true, ""}, index, hash})
-		// log.Println(tree)
+
+		if b.Data == "" {
+			render.JSON(w, r, addDataResponse{MerkleAPIResponse{false, "Missing data field"}, -1, ""})
+			return
+		}
+		fmt.Println(b.Data)
+		index, hash := tree.Add([]byte(b.Data))
+		render.JSON(w, r, addDataResponse{MerkleAPIResponse{true, ""}, index, hash})
 	}
 	return handler
 }

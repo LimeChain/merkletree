@@ -3,6 +3,7 @@ package memory
 import (
 	"../../merkletree"
 	"../../merkletree/merkletreetest"
+	"fmt"
 	"github.com/ethereum/go-ethereum/crypto"
 	"testing"
 )
@@ -67,7 +68,7 @@ func TestIntermediaryHashesByIndex(t *testing.T) {
 	_, err := tree.IntermediaryHashesByIndex(1)
 
 	et.Assert(err != nil, "Error was not thrown")
-	et.Assert(err.Error() == outOfBounds, "Error was not thrown")
+	et.Assert(err.Error() == outOfBounds, "Incorrect message was thrown on fetching hashes by out of bounds index")
 
 	data1 := []byte("First Leaf")
 	dh1 := crypto.Keccak256Hash(data1)
@@ -91,4 +92,130 @@ func TestIntermediaryHashesByIndex(t *testing.T) {
 	et.Assert(hashes[0] == expectedHash0, "Incorrect intermediary hash at level 0 "+expectedHash0)
 	et.Assert(hashes[1] == expectedHash1, "Incorrect intermediary hash at level 1 "+expectedHash0)
 
+}
+
+func TestValidateExistence(t *testing.T) {
+	et := merkletreetest.WrapTesting(t)
+
+	tree := NewMerkleTree()
+
+	data1 := []byte("First Leaf")
+	tree.Add(data1)
+
+	data2 := []byte("Second Leaf")
+	tree.Add(data2)
+
+	data3 := []byte("Third Leaf")
+	tree.Add(data3)
+
+	hashes, err := tree.IntermediaryHashesByIndex(1)
+
+	et.Assert(err == nil, "Error was thrown for intermediary hashes")
+
+	result, err := tree.ValidateExistence(data2, 1, hashes)
+
+	et.Assert(err == nil, "Error was thrown on validating data2")
+	et.Assert(result, "Did not find the original data on index 1")
+
+	result, err = tree.ValidateExistence(data1, 1, hashes)
+
+	et.Assert(err == nil, "Error was thrown on validating data1")
+	et.Assert(!result, "Found correct data1 on index 1 but should not have found one")
+
+	result, err = tree.ValidateExistence(data2, 2, hashes)
+
+	et.Assert(err == nil, "Error was thrown on validating data2")
+	et.Assert(!result, "Found correct data1 on index 2 but should not have found one")
+
+	result, err = tree.ValidateExistence(data2, 1, []string{})
+
+	et.Assert(err == nil, "Error was thrown on validating data2")
+	et.Assert(!result, "Found correct data2 on index 1 without intermediary hashes but should not have found one")
+
+	result, err = tree.ValidateExistence(data2, 10, hashes)
+
+	et.Assert(err != nil, "Error was thrown on index out of boundes")
+	et.Assert(err.Error() == outOfBounds, "Incorrect message was thrown on validating out of bounds index")
+}
+
+func TestLength(t *testing.T) {
+	et := merkletreetest.WrapTesting(t)
+
+	tree := NewMerkleTree()
+
+	data1 := []byte("First Leaf")
+	tree.Add(data1)
+
+	et.Assert(tree.Length() == 1, "The length of the tree was not 1 after 1 addition")
+
+	data2 := []byte("Second Leaf")
+	tree.Add(data2)
+
+	et.Assert(tree.Length() == 2, "The length of the tree was not 2 after second")
+
+}
+
+func TestString(t *testing.T) {
+	et := merkletreetest.WrapTesting(t)
+
+	tree := NewMerkleTree()
+
+	data1 := []byte("First Leaf")
+	tree.Add(data1)
+
+	data2 := []byte("Second Leaf")
+	tree.Add(data2)
+
+	expected := `Level: 1, Count: 1
+0x079c36e0e4573fd7169dfb6f6397bea69db51ca66bce0299a0ec643bd5996721	
+Level: 0, Count: 2
+0x1d47c3db13342a2ebb20fd47631d12370cf0dd323fe39503597bf38bc107cd5f	0x87f67c448ec13f7c376de9f12b39ae06a3b8d7c64ee9e311b30d428a5ed9fe91	
+`
+
+	received := tree.String()
+
+	fmt.Println(expected)
+	fmt.Println(received)
+
+	et.Assert(received == expected, tree.String())
+
+}
+
+func TestHashAt(t *testing.T) {
+	et := merkletreetest.WrapTesting(t)
+
+	tree := NewMerkleTree()
+
+	data1 := []byte("First Leaf")
+	dh1 := crypto.Keccak256Hash(data1)
+	tree.Add(data1)
+
+	hash, err := tree.HashAt(0)
+
+	et.Assert(err == nil, "Error was thrown for fetching first hash")
+	et.Assert(hash == dh1.Hex(), "Incorrect hash was returned")
+
+	_, err = tree.HashAt(5)
+
+	et.Assert(err != nil, "Error was thrown on index out of boundes")
+	et.Assert(err.Error() == outOfBounds, "Incorrect message was thrown on requesting hash at index out of bounds")
+
+}
+
+func TestMarshalJSON(t *testing.T) {
+	et := merkletreetest.WrapTesting(t)
+
+	tree := NewMerkleTree()
+
+	data1 := []byte("First Leaf")
+	tree.Add(data1)
+
+	data2 := []byte("Second Leaf")
+	tree.Add(data2)
+
+	expected := `{"root":"0x079c36e0e4573fd7169dfb6f6397bea69db51ca66bce0299a0ec643bd5996721", "length":2}`
+
+	received, _ := tree.MarshalJSON()
+
+	et.Assert(string(received) == expected, string(received))
 }

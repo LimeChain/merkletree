@@ -5,6 +5,7 @@ import (
 	"./merkletree/memory"
 	"./merkletree/postgres"
 	merkleRestAPI "./merkletree/restapi/baseapi"
+	validateAPI "./merkletree/restapi/validateapi"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/render"
@@ -27,6 +28,7 @@ func createAndStartAPI(tree merkletree.MarshalledMerkleTree) {
 		treeRouter = merkleRestAPI.MerkleTreeStatus(treeRouter, tree)
 		treeRouter = merkleRestAPI.MerkleTreeInsert(treeRouter, tree)
 		treeRouter = merkleRestAPI.MerkleTreeHashes(treeRouter, tree)
+		treeRouter = validateAPI.MerkleTreeValidate(treeRouter, tree)
 		r.Mount("/api/merkletree", treeRouter)
 	})
 
