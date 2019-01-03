@@ -8,10 +8,10 @@ type ExtendedTesting struct {
 	*testing.T
 }
 
-func (et *ExtendedTesting) Assert(condition bool, msg string) {
+func (et *ExtendedTesting) Assert(condition bool, msg ...interface{}) {
 
 	if !condition {
-		et.Error(msg)
+		et.Error(msg...)
 	}
 }
 

@@ -11,18 +11,9 @@ import (
 	"sync"
 )
 
-var debug = false
-
 const (
 	outOfBounds = "Incorrect index - Index out of bounds"
 )
-
-func printf(format string, a ...interface{}) {
-	if !debug {
-		return
-	}
-	fmt.Printf(format, a...)
-}
 
 // Node is implementation of types.Node and representation of a single node or leaf in the merkle tree
 type Node struct {
@@ -66,8 +57,6 @@ func (tree *MerkleTree) resizeVertically() {
 		n := make([][]*Node, neededLevels)
 		copy(n, tree.Nodes)
 		tree.Nodes = n
-
-		printf("MerkleTree resized to %v levels\n", neededLevels)
 	}
 
 }
@@ -77,8 +66,6 @@ func (tree *MerkleTree) propagateChange() (root *Node) {
 	tree.resizeVertically()
 
 	levels := len(tree.Nodes)
-
-	printf("Levels %v\n", levels)
 
 	lastNodeSibling := func(nodes []*Node, length int) *Node {
 		if length%2 == 0 {
@@ -125,10 +112,7 @@ func (tree *MerkleTree) propagateChange() (root *Node) {
 
 		tree.Nodes[i+1] = updateParentLevel(parentNode, tree.Nodes[i+1]) // Update the parent level
 
-		printf("Level: %v, Level count: %v\n", i, levelLen)
 	}
-
-	printf("====\n")
 
 	root = tree.Nodes[levels-1][0]
 

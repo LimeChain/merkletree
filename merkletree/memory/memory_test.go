@@ -57,8 +57,24 @@ func TestAdd(t *testing.T) {
 	et.Assert(i == 2, "The index of third addition was not 2")
 	et.Assert(h == expectedHash, "The hash of the added node was not the keccak256 hash of the data")
 
-	et.Assert(tree.Root() == expectedRoot, "The hash of the root was not correctly calculated")
+	et.Assert(tree.Root() == expectedRoot, "The hash of the root was not correctly calculated", tree)
 	et.Assert(len(tree.Nodes) == 3, "The tree did not grow to 2 levels")
+
+	data4 := []byte("Fourth Leaf")
+	dh4 := crypto.Keccak256Hash(data4)
+	expectedHash = dh4.Hex()
+	i, h = tree.Add(data4)
+
+	leftBranch = crypto.Keccak256Hash(dh1[:], dh2[:])
+	rightBranch = crypto.Keccak256Hash(dh3[:], dh4[:])
+
+	expectedRoot = crypto.Keccak256Hash(leftBranch[:], rightBranch[:]).Hex()
+
+	et.Assert(i == 3, "The index of third addition was not 2")
+	et.Assert(h == expectedHash, "The hash of the added node was not the keccak256 hash of the data")
+
+	et.Assert(tree.Root() == expectedRoot, "The hash of the root was not correctly calculated", tree)
+	et.Assert(len(tree.Nodes) == 3, "The tree was not 2 levels after fourth addition")
 }
 
 func TestIntermediaryHashesByIndex(t *testing.T) {
@@ -75,7 +91,13 @@ func TestIntermediaryHashesByIndex(t *testing.T) {
 
 	tree.Add(data1)
 
+	hashes, err := tree.IntermediaryHashesByIndex(0)
+
+	et.Assert(err == nil, "Error was thrown")
+	et.Assert(len(hashes) == 0, "Too many intermediary hashes were returned")
+
 	data2 := []byte("Second Leaf")
+	dh2 := crypto.Keccak256Hash(data2)
 	tree.Add(data2)
 
 	data3 := []byte("Third Leaf")
@@ -85,7 +107,17 @@ func TestIntermediaryHashesByIndex(t *testing.T) {
 	expectedHash0 := dh1.Hex()
 	expectedHash1 := crypto.Keccak256Hash(dh3[:], dh3[:]).Hex()
 
-	hashes, err := tree.IntermediaryHashesByIndex(1)
+	hashes, err = tree.IntermediaryHashesByIndex(1)
+
+	et.Assert(err == nil, "Error was thrown")
+	et.Assert(len(hashes) == 2, "Too many intermediary hashes were returned")
+	et.Assert(hashes[0] == expectedHash0, "Incorrect intermediary hash at level 0 "+expectedHash0)
+	et.Assert(hashes[1] == expectedHash1, "Incorrect intermediary hash at level 1 "+expectedHash0)
+
+	expectedHash0 = dh3.Hex()
+	expectedHash1 = crypto.Keccak256Hash(dh1[:], dh2[:]).Hex()
+
+	hashes, err = tree.IntermediaryHashesByIndex(2)
 
 	et.Assert(err == nil, "Error was thrown")
 	et.Assert(len(hashes) == 2, "Too many intermediary hashes were returned")
@@ -136,6 +168,7 @@ func TestValidateExistence(t *testing.T) {
 
 	et.Assert(err != nil, "Error was thrown on index out of boundes")
 	et.Assert(err.Error() == outOfBounds, "Incorrect message was thrown on validating out of bounds index")
+
 }
 
 func TestLength(t *testing.T) {
@@ -218,4 +251,27 @@ func TestMarshalJSON(t *testing.T) {
 	received, _ := tree.MarshalJSON()
 
 	et.Assert(string(received) == expected, string(received))
+}
+
+func TestNode(t *testing.T) {
+	et := merkletreetest.WrapTesting(t)
+	data := "TestData"
+	h := crypto.Keccak256Hash([]byte(data))
+	n := Node{
+		hash:   h,
+		Parent: nil,
+		index:  5, // Parent index is always the current node index divided by two
+	}
+
+	et.Assert(n.Index() == 5, "The index returned was not correct")
+	et.Assert(n.Hash() == h.Hex(), "The hash returned was not correct")
+	et.Assert(n.String() == h.Hex(), "The hash returned was not correct")
+}
+
+func BenchmarkAdd(b *testing.B) {
+	tree := NewMerkleTree()
+
+	for i := 0; i < 1000000; i++ {
+		tree.Add([]byte("First Leaf" + string(i)))
+	}
 }

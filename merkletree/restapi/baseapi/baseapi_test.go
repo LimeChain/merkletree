@@ -106,4 +106,29 @@ func TestMerkleTreeInsert(t *testing.T) {
 	et.Assert(r.Index == 0, "The inserted index was not 0 for addition")
 	et.Assert(r.Hash == expectedHash, "The returned hash was not the hash of the passed data")
 
+	type fakeStruct struct {
+		b float64
+	}
+
+	fs1 := fakeStruct{14.6}
+
+	reqString, err = json.Marshal(fs1)
+
+	resp, err = server.Client().Post(server.URL+"/v1/api/merkletree", "application/json", bytes.NewBuffer(reqString))
+
+	decoder = json.NewDecoder(resp.Body)
+	err = decoder.Decode(&r)
+	et.Assert(err == nil, "Error was thrown when parsing the response")
+	et.Assert(!r.Status, "The status for wrong data insert was true")
+	et.Assert(r.Error == "Missing data field", "The status for wrong data insert was true")
+	et.Assert(r.Index == -1, "The inserted index was not -1 for wrong addition")
+
+	resp, err = server.Client().Post(server.URL+"/v1/api/merkletree", "application/json", bytes.NewBufferString("wrong-json-format"))
+
+	decoder = json.NewDecoder(resp.Body)
+	err = decoder.Decode(&r)
+	et.Assert(err == nil, "Error was thrown when parsing the response")
+	et.Assert(!r.Status, "The status for wrong data insert was true")
+	et.Assert(r.Index == -1, "The inserted index was not -1 for wrong addition")
+
 }
