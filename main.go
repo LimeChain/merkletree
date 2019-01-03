@@ -31,13 +31,14 @@ func createAndStartAPI(tree merkletree.MarshalledMerkleTree) {
 		treeRouter = validateAPI.MerkleTreeValidate(treeRouter, tree)
 		r.Mount("/api/merkletree", treeRouter)
 	})
-
 	log.Fatal(http.ListenAndServe(":8080", router))
 }
 
 func main() {
 	// elements := 1000000
-	tree := postgres.NewMerkleTree(memory.NewMerkleTree())
+	connStr := "user=georgespasov dbname=postgres port=5432 sslmode=disable"
+	tree := postgres.LoadMerkleTree(memory.NewMerkleTree(), connStr)
+	// tree := postgres.NewMerkleTree(memory.NewMerkleTree(), connStr)
 	// for i := 0; i < elements; i++ {
 	// 	tree.Add([]byte("hello" + strconv.Itoa(i)))
 	// }

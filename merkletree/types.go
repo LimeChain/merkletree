@@ -16,6 +16,7 @@ type Node interface {
 type MerkleTree interface {
 	fmt.Stringer
 	Add(data []byte) (index int, hash string)
+	Insert(hash string) (index int)
 	IntermediaryHashesByIndex(index int) (intermediaryHashes []string, err error)
 	ValidateExistence(original []byte, index int, intermediaryHashes []string) (bool, error)
 	HashAt(index int) (string, error)

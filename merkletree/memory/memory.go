@@ -162,11 +162,17 @@ func (tree *MerkleTree) getIntermediaryHashesByIndex(index int) (intermediaryHas
 // Also recalculates and recalibrates the tree.
 // Returns the index it was inserted and the hash of the new data
 func (tree *MerkleTree) Add(data []byte) (index int, hash string) {
+	h := crypto.Keccak256Hash(data)
+	index = tree.Insert(h.Hex())
+	return index, h.Hex()
+}
+
+func (tree *MerkleTree) Insert(hash string) (index int) {
 	tree.mutex.RLock()
 	index = len(tree.Nodes[0])
 
 	leaf := &Node{
-		crypto.Keccak256Hash(data),
+		common.HexToHash(hash),
 		index,
 		nil,
 	}
@@ -179,7 +185,7 @@ func (tree *MerkleTree) Add(data []byte) (index int, hash string) {
 		tree.RootNode = tree.propagateChange()
 	}
 	tree.mutex.RUnlock()
-	return index, leaf.Hash()
+	return index
 }
 
 // IntermediaryHashesByIndex returns all hashes needed to produce the root from the comming index

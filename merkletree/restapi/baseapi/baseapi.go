@@ -3,7 +3,6 @@ package baseapi
 import (
 	"../../../merkletree"
 	"encoding/json"
-	"fmt"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/render"
 	"net/http"
@@ -53,7 +52,7 @@ func getTreeStatus(tree merkletree.MarshalledMerkleTree) func(w http.ResponseWri
 
 type intermediaryHashesResponse struct {
 	MerkleAPIResponse
-	Hashes []string `json:"hashes,omitempty"`
+	Hashes []string `json:"hashes"`
 }
 
 func getIntermediaryHashesHandler(tree merkletree.MerkleTree) func(w http.ResponseWriter, r *http.Request) {
@@ -97,7 +96,6 @@ func addDataHandler(tree merkletree.MerkleTree) func(w http.ResponseWriter, r *h
 			render.JSON(w, r, addDataResponse{MerkleAPIResponse{false, "Missing data field"}, -1, ""})
 			return
 		}
-		fmt.Println(b.Data)
 		index, hash := tree.Add([]byte(b.Data))
 		render.JSON(w, r, addDataResponse{MerkleAPIResponse{true, ""}, index, hash})
 	}
