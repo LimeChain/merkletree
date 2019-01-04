@@ -1,8 +1,8 @@
 package baseapi
 
 import (
-	"../../../merkletree"
 	"encoding/json"
+	"github.com/LimeChain/merkle-tree-api/merkletree"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/render"
 	"net/http"

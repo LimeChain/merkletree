@@ -1,9 +1,9 @@
 package postgres
 
 import (
-	"../../merkletree"
 	"database/sql"
 	"fmt"
+	"github.com/LimeChain/merkle-tree-api/merkletree"
 	_ "github.com/lib/pq"
 )
 

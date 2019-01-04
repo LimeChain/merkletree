@@ -1,10 +1,10 @@
 package validateapi
 
 import (
-	"../../../merkletree"
-	"../baseapi"
 	"encoding/json"
 	"fmt"
+	"github.com/LimeChain/merkle-tree-api/merkletree"
+	"github.com/LimeChain/merkle-tree-api/merkletree/restapi/baseapi"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/render"
 	"net/http"
