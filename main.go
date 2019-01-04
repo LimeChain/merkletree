@@ -13,7 +13,7 @@ import (
 	"net/http"
 )
 
-func createAndStartAPI(tree merkletree.MarshalledMerkleTree) {
+func createAndStartAPI(tree merkletree.ExternalMerkleTree) {
 	router := chi.NewRouter()
 	router.Use(
 		render.SetContentType(render.ContentTypeJSON),

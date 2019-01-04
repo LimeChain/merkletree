@@ -15,34 +15,39 @@ const (
 )
 
 type PostgresMerkleTree struct {
-	merkletree.MarshalledMerkleTree
+	merkletree.FullMerkleTree
 	db *sql.DB
 }
 
 func (tree *PostgresMerkleTree) Add(data []byte) (index int, hash string) {
-	index, hash = tree.MarshalledMerkleTree.Add(data)
+	index, hash = tree.FullMerkleTree.Add(data)
+	tree.addHashToDB(hash)
+	return index, hash
+}
+
+func (tree *PostgresMerkleTree) addHashToDB(hash string) {
 	_, err := tree.db.Exec(InsertQuery, hash)
 	if err != nil {
 		fmt.Println(err.Error())
 	}
-	return index, hash
 }
 
-// LoadMerkleTree takes an implementation of Merkle tree and postgre connection string
-// Augments the tree with db saving
-// returns a pointer to an initialized PostgresMerkleTree
-func LoadMerkleTree(tree merkletree.MarshalledMerkleTree, connStr string) *PostgresMerkleTree {
-
+func connectToDb(connStr string) *sql.DB {
 	db, err := sql.Open("postgres", connStr)
 	if err != nil {
 		panic(err)
 	}
+	return db
+}
 
-	_, err = db.Exec(CreateIfNotExists)
+func createHashesTable(db *sql.DB) {
+	_, err := db.Exec(CreateIfNotExists)
 	if err != nil {
 		panic(err)
 	}
+}
 
+func getAndInsertStoredHashes(db *sql.DB, tree merkletree.InternalMerkleTree) {
 	rows, err := db.Query(SelectQuery)
 	if err != nil {
 		panic(err)
@@ -56,10 +61,22 @@ func LoadMerkleTree(tree merkletree.MarshalledMerkleTree, connStr string) *Postg
 		}
 		tree.Insert(hash)
 	}
+}
+
+// LoadMerkleTree takes an implementation of Merkle tree and postgre connection string
+// Augments the tree with db saving
+// returns a pointer to an initialized PostgresMerkleTree
+func LoadMerkleTree(tree merkletree.FullMerkleTree, connStr string) *PostgresMerkleTree {
+
+	db := connectToDb(connStr)
+
+	createHashesTable(db)
+
+	getAndInsertStoredHashes(db, tree)
 
 	postgresMemoryTree := PostgresMerkleTree{}
 	postgresMemoryTree.db = db
-	postgresMemoryTree.MarshalledMerkleTree = tree
+	postgresMemoryTree.FullMerkleTree = tree
 
 	return &postgresMemoryTree
 }

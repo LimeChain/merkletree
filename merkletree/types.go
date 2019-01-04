@@ -16,7 +16,6 @@ type Node interface {
 type MerkleTree interface {
 	fmt.Stringer
 	Add(data []byte) (index int, hash string)
-	Insert(hash string) (index int)
 	IntermediaryHashesByIndex(index int) (intermediaryHashes []string, err error)
 	ValidateExistence(original []byte, index int, intermediaryHashes []string) (bool, error)
 	HashAt(index int) (string, error)
@@ -24,7 +23,27 @@ type MerkleTree interface {
 	Length() int
 }
 
-type MarshalledMerkleTree interface {
+type Internaler interface {
+	Insert(hash string) (index int)
+	// TODO Recalculate to be addet too
+}
+
+type InternalMerkleTree interface {
+	MerkleTree
+	Internaler
+}
+
+type Externaler interface {
+	json.Marshaler
+}
+
+type ExternalMerkleTree interface {
 	json.Marshaler
 	MerkleTree
+}
+
+type FullMerkleTree interface {
+	MerkleTree
+	Internaler
+	Externaler
 }

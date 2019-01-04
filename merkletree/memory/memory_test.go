@@ -15,8 +15,12 @@ func TestNewMerkleTree(t *testing.T) {
 	et.Assert(len(tree.Nodes) == 1, "The tree did not have 1 initial level")
 	_, isMerkleTree := interface{}(tree).(merkletree.MerkleTree)
 	et.Assert(isMerkleTree, "The tree did not implement the MerkleTree interface")
-	_, isMarshalledMerkleTree := interface{}(tree).(merkletree.MarshalledMerkleTree)
-	et.Assert(isMarshalledMerkleTree, "The tree did not implement the MarshalledMerkleTree interface")
+	_, isExternalMerkleTree := interface{}(tree).(merkletree.ExternalMerkleTree)
+	et.Assert(isExternalMerkleTree, "The tree did not implement the MarshalledMerkleTree interface")
+	_, isInternalMerkleTree := interface{}(tree).(merkletree.InternalMerkleTree)
+	et.Assert(isInternalMerkleTree, "The tree did not implement the InternalMerkleTree interface")
+	_, isFullMerkleTree := interface{}(tree).(merkletree.FullMerkleTree)
+	et.Assert(isFullMerkleTree, "The tree did not implement the FullMerkleTree interface")
 }
 
 func TestAdd(t *testing.T) {
