@@ -1,9 +1,9 @@
 package memory
 
 import (
-	"../../merkletree"
-	"../../merkletree/merkletreetest"
 	"fmt"
+	"github.com/LimeChain/merkle-tree-api/merkletree"
+	"github.com/LimeChain/merkle-tree-api/merkletree/merkletreetest"
 	"github.com/ethereum/go-ethereum/crypto"
 	"testing"
 )

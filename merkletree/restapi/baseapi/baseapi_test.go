@@ -1,11 +1,11 @@
 package baseapi
 
 import (
-	"../../../merkletree/memory"
-	"../../../merkletree/merkletreetest"
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/LimeChain/merkle-tree-api/merkletree/memory"
+	"github.com/LimeChain/merkle-tree-api/merkletree/merkletreetest"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"

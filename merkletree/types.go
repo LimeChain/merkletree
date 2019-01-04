@@ -23,27 +23,27 @@ type MerkleTree interface {
 	Length() int
 }
 
-type Internaler interface {
+type internaler interface {
 	Insert(hash string) (index int)
 	// TODO Recalculate to be addet too
 }
 
 type InternalMerkleTree interface {
 	MerkleTree
-	Internaler
+	internaler
 }
 
-type Externaler interface {
+type externaler interface {
 	json.Marshaler
 }
 
 type ExternalMerkleTree interface {
-	json.Marshaler
 	MerkleTree
+	externaler
 }
 
 type FullMerkleTree interface {
 	MerkleTree
-	Internaler
-	Externaler
+	internaler
+	externaler
 }
