@@ -3,7 +3,7 @@ package postgres
 import (
 	"database/sql"
 	"fmt"
-	"github.com/LimeChain/merkle-tree-api/merkletree"
+	"github.com/LimeChain/merkletree"
 	_ "github.com/lib/pq"
 )
 

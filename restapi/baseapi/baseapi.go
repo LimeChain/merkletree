@@ -2,7 +2,7 @@ package baseapi
 
 import (
 	"encoding/json"
-	"github.com/LimeChain/merkle-tree-api/merkletree"
+	"github.com/LimeChain/merkletree"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/render"
 	"net/http"
