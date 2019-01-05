@@ -167,6 +167,9 @@ func (tree *MerkleTree) Add(data []byte) (index int, hash string) {
 	return index, h.Hex()
 }
 
+// Insert creates node out of the hash and pushes it into the tree
+// Also recalculates and recalibrates the tree
+// Returns the index it was inserted at
 func (tree *MerkleTree) Insert(hash string) (index int) {
 	tree.mutex.RLock()
 	index = len(tree.Nodes[0])
@@ -188,7 +191,7 @@ func (tree *MerkleTree) Insert(hash string) (index int) {
 	return index
 }
 
-// IntermediaryHashesByIndex returns all hashes needed to produce the root from the comming index
+// IntermediaryHashesByIndex returns all hashes needed to produce the root from the given index
 func (tree *MerkleTree) IntermediaryHashesByIndex(index int) (intermediaryHashes []string, err error) {
 	if index >= len(tree.Nodes[0]) {
 		return nil, errors.New(outOfBounds)
@@ -202,10 +205,8 @@ func (tree *MerkleTree) IntermediaryHashesByIndex(index int) (intermediaryHashes
 	return intermediaryHashes, nil
 }
 
-// ValidateExistence emulates how third party would validate the data
-// Given original data, the index it is supposed to be and the intermediaryHashes to the root
-// Validates that this is the correct data for that slot
-// In production you can just check the HashAt and hash the original data yourself
+// ValidateExistence emulates how third party would validate the data. Given original data, the index it is supposed to be and the intermediaryHashes,
+// the method validates that this is the correct data for that slot. In production you can just check the HashAt and hash the original data yourself
 func (tree *MerkleTree) ValidateExistence(original []byte, index int, intermediaryHashes []string) (result bool, err error) {
 	if index >= len(tree.Nodes[0]) {
 		return false, errors.New(outOfBounds)
