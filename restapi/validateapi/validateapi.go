@@ -2,7 +2,6 @@ package validateapi
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/LimeChain/merkletree"
 	"github.com/LimeChain/merkletree/restapi/baseapi"
 	"github.com/go-chi/chi"
@@ -27,8 +26,8 @@ type validateResponse struct {
 	Exists bool `json:"exists"`
 }
 
-func validate(tree merkletree.ExternalMerkleTree) func(w http.ResponseWriter, r *http.Request) {
-	handler := func(w http.ResponseWriter, r *http.Request) {
+func validate(tree merkletree.ExternalMerkleTree) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
 		decoder := json.NewDecoder(r.Body)
 		var b validateRequest
 		err := decoder.Decode(&b)
@@ -41,8 +40,6 @@ func validate(tree merkletree.ExternalMerkleTree) func(w http.ResponseWriter, r 
 			render.JSON(w, r, validateResponse{baseapi.MerkleAPIResponse{Status: false, Error: "Missing data field"}, false})
 			return
 		}
-		fmt.Println(b.Data)
-		fmt.Println(b.Index)
 		exists, err := tree.ValidateExistence([]byte(b.Data), b.Index, b.Hashes)
 		if err != nil {
 			render.JSON(w, r, validateResponse{baseapi.MerkleAPIResponse{Status: false, Error: err.Error()}, false})
@@ -51,5 +48,4 @@ func validate(tree merkletree.ExternalMerkleTree) func(w http.ResponseWriter, r 
 
 		render.JSON(w, r, validateResponse{baseapi.MerkleAPIResponse{Status: true, Error: ""}, exists})
 	}
-	return handler
 }

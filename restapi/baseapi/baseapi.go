@@ -38,8 +38,8 @@ type treeStatusResponse struct {
 	Tree merkletree.MerkleTree `json:"tree"`
 }
 
-func getTreeStatus(tree merkletree.ExternalMerkleTree) func(w http.ResponseWriter, r *http.Request) {
-	handler := func(w http.ResponseWriter, r *http.Request) {
+func getTreeStatus(tree merkletree.ExternalMerkleTree) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
 		if tree.Length() == 0 {
 			render.JSON(w, r, treeStatusResponse{MerkleAPIResponse{true, ""}, nil})
 			return
@@ -47,7 +47,6 @@ func getTreeStatus(tree merkletree.ExternalMerkleTree) func(w http.ResponseWrite
 		render.JSON(w, r, treeStatusResponse{MerkleAPIResponse{true, ""}, tree})
 		return
 	}
-	return handler
 }
 
 type intermediaryHashesResponse struct {
@@ -55,8 +54,8 @@ type intermediaryHashesResponse struct {
 	Hashes []string `json:"hashes"`
 }
 
-func getIntermediaryHashesHandler(tree merkletree.ExternalMerkleTree) func(w http.ResponseWriter, r *http.Request) {
-	handler := func(w http.ResponseWriter, r *http.Request) {
+func getIntermediaryHashesHandler(tree merkletree.ExternalMerkleTree) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
 		index, err := strconv.Atoi(chi.URLParam(r, "index"))
 		if err != nil {
 			render.JSON(w, r, intermediaryHashesResponse{MerkleAPIResponse{false, err.Error()}, nil})
@@ -69,7 +68,6 @@ func getIntermediaryHashesHandler(tree merkletree.ExternalMerkleTree) func(w htt
 		}
 		render.JSON(w, r, intermediaryHashesResponse{MerkleAPIResponse{true, ""}, hashes})
 	}
-	return handler
 }
 
 type addDataRequest struct {
@@ -82,8 +80,8 @@ type addDataResponse struct {
 	Hash  string `json:"hash,omitempty"`
 }
 
-func addDataHandler(tree merkletree.ExternalMerkleTree) func(w http.ResponseWriter, r *http.Request) {
-	handler := func(w http.ResponseWriter, r *http.Request) {
+func addDataHandler(tree merkletree.ExternalMerkleTree) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
 		decoder := json.NewDecoder(r.Body)
 		var b addDataRequest
 		err := decoder.Decode(&b)
@@ -99,5 +97,4 @@ func addDataHandler(tree merkletree.ExternalMerkleTree) func(w http.ResponseWrit
 		index, hash := tree.Add([]byte(b.Data))
 		render.JSON(w, r, addDataResponse{MerkleAPIResponse{true, ""}, index, hash})
 	}
-	return handler
 }

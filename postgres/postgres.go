@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/LimeChain/merkletree"
 	_ "github.com/lib/pq"
+	"sync"
 )
 
 const (
@@ -16,12 +17,15 @@ const (
 
 type PostgresMerkleTree struct {
 	merkletree.FullMerkleTree
-	db *sql.DB
+	db    *sql.DB
+	mutex sync.Mutex
 }
 
 func (tree *PostgresMerkleTree) Add(data []byte) (index int, hash string) {
+	tree.mutex.Lock()
 	index, hash = tree.FullMerkleTree.Add(data)
 	tree.addHashToDB(hash)
+	tree.mutex.Unlock()
 	return index, hash
 }
 
@@ -35,7 +39,7 @@ func (tree *PostgresMerkleTree) addHashToDB(hash string) {
 func connectToDb(connStr string) *sql.DB {
 	db, err := sql.Open("postgres", connStr)
 	if err != nil {
-		panic(err)
+		panic("Could not connect to the database.\n Original error: " + err.Error())
 	}
 	return db
 }
@@ -43,21 +47,21 @@ func connectToDb(connStr string) *sql.DB {
 func createHashesTable(db *sql.DB) {
 	_, err := db.Exec(CreateIfNotExists)
 	if err != nil {
-		panic(err)
+		panic("Could not create the table in the db.\n Original error: " + err.Error())
 	}
 }
 
 func getAndInsertStoredHashes(db *sql.DB, tree merkletree.InternalMerkleTree) {
 	rows, err := db.Query(SelectQuery)
 	if err != nil {
-		panic(err)
+		panic("Could not query the stored hashes.\n Original error: " + err.Error())
 	}
 
 	for rows.Next() {
 		var hash string
 		err = rows.Scan(&hash)
 		if err != nil {
-			panic(err)
+			panic("Could not scan the stored hashes.\n Original error: " + err.Error())
 		}
 		tree.RawInsert(hash)
 	}
