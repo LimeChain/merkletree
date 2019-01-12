@@ -59,8 +59,10 @@ func getAndInsertStoredHashes(db *sql.DB, tree merkletree.InternalMerkleTree) {
 		if err != nil {
 			panic(err)
 		}
-		tree.Insert(hash)
+		tree.RawInsert(hash)
 	}
+
+	tree.Recalculate()
 }
 
 // LoadMerkleTree takes an implementation of Merkle tree and postgre connection string

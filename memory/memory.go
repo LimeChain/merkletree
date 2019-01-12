@@ -4,6 +4,7 @@ package memory
 import (
 	"errors"
 	"fmt"
+	"github.com/LimeChain/merkletree"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"math"
@@ -41,7 +42,7 @@ func (node Node) String() string {
 type MerkleTree struct {
 	Nodes    [][]*Node
 	RootNode *Node
-	mutex    sync.RWMutex
+	Mutex    sync.RWMutex
 }
 
 func (tree *MerkleTree) init() {
@@ -61,6 +62,19 @@ func (tree *MerkleTree) resizeVertically() {
 
 }
 
+func createParent(left, right *Node) *Node {
+	parentNode := &Node{
+		hash:   crypto.Keccak256Hash(left.hash[:], right.hash[:]),
+		Parent: nil,
+		index:  right.index / 2, // Parent index is always the current node index divided by two
+	}
+
+	left.Parent = parentNode
+	right.Parent = parentNode
+
+	return parentNode
+}
+
 func (tree *MerkleTree) propagateChange() (root *Node) {
 
 	tree.resizeVertically()
@@ -74,19 +88,6 @@ func (tree *MerkleTree) propagateChange() (root *Node) {
 		}
 		// The added node created new pair - duplicate itself
 		return nodes[length-1]
-	}
-
-	createParent := func(left, right *Node) *Node {
-		parentNode := &Node{
-			hash:   crypto.Keccak256Hash(left.hash[:], right.hash[:]),
-			Parent: nil,
-			index:  right.index / 2, // Parent index is always the current node index divided by two
-		}
-
-		left.Parent = parentNode
-		right.Parent = parentNode
-
-		return parentNode
 	}
 
 	updateParentLevel := func(parent *Node, parentLevel []*Node) []*Node {
@@ -167,11 +168,9 @@ func (tree *MerkleTree) Add(data []byte) (index int, hash string) {
 	return index, h.Hex()
 }
 
-// Insert creates node out of the hash and pushes it into the tree
-// Also recalculates and recalibrates the tree
-// Returns the index it was inserted at
-func (tree *MerkleTree) Insert(hash string) (index int) {
-	tree.mutex.RLock()
+// RawInsert creates node out of the hash and pushes it into the tree without recalculating the tree
+// Returns the index of the leaf and the node
+func (tree *MerkleTree) RawInsert(hash string) (index int, insertedLeaf merkletree.Node) {
 	index = len(tree.Nodes[0])
 
 	leaf := &Node{
@@ -182,12 +181,47 @@ func (tree *MerkleTree) Insert(hash string) (index int) {
 
 	tree.Nodes[0] = append(tree.Nodes[0], leaf)
 
+	return index, leaf
+}
+
+// Recalculate recreates the whole tree bottom up and returns the hex string of the new root.
+// Great to be used with RawInsert when loading up the tree data.
+func (tree *MerkleTree) Recalculate() (treeRoot string) {
+	if tree.Length() == 0 {
+		return ""
+	}
+	tree.resizeVertically()
+	levels := len(tree.Nodes)
+
+	for i := 0; i < levels-1; i++ {
+		levelLen := len(tree.Nodes[i])
+		tree.Nodes[i+1] = make([]*Node, (levelLen/2)+(levelLen%2))
+		for j := 0; j < len(tree.Nodes[i]); j += 2 {
+			left := tree.Nodes[i][j]
+			right := tree.getNodeSibling(i, j)
+			tree.Nodes[i+1][j/2] = createParent(left, right)
+		}
+	}
+
+	tree.RootNode = tree.Nodes[levels-1][0]
+
+	return tree.RootNode.Hash()
+}
+
+// Insert creates node out of the hash and pushes it into the tree
+// Also recalculates and recalibrates the tree
+// Returns the index it was inserted at
+func (tree *MerkleTree) Insert(hash string) (index int) {
+	tree.Mutex.RLock()
+	index, leaf := tree.RawInsert(hash)
+
 	if index == 0 {
-		tree.RootNode = leaf
+		rootNode, _ := leaf.(*Node)
+		tree.RootNode = rootNode
 	} else {
 		tree.RootNode = tree.propagateChange()
 	}
-	tree.mutex.RUnlock()
+	tree.Mutex.RUnlock()
 	return index
 }
 
@@ -239,6 +273,9 @@ func (tree *MerkleTree) ValidateExistence(original []byte, index int, intermedia
 
 // Root returns the hash of the root of the tree
 func (tree *MerkleTree) Root() string {
+	if tree.RootNode == nil {
+		return ""
+	}
 	return tree.RootNode.Hash()
 }
 

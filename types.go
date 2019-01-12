@@ -25,9 +25,12 @@ type MerkleTree interface {
 
 type internaler interface {
 	Insert(hash string) (index int)
-	// TODO Recalculate to be addet too
+	RawInsert(hash string) (index int, leaf Node)
+	Recalculate() (root string)
 }
 
+// InternalMerkleTree defines additional functions that are not supposed to be exposed to outside user to call.
+// These functions deal with direct inserts of hashes and tree recalculation
 type InternalMerkleTree interface {
 	MerkleTree
 	internaler
@@ -37,11 +40,13 @@ type externaler interface {
 	json.Marshaler
 }
 
+// ExternalMerkleTree defines additional functions that are to be exported when the tree is communicated with the outside world.
 type ExternalMerkleTree interface {
 	MerkleTree
 	externaler
 }
 
+// FullMerkleTree is both Internal and External
 type FullMerkleTree interface {
 	MerkleTree
 	internaler
