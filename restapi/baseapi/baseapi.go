@@ -2,27 +2,28 @@ package baseapi
 
 import (
 	"encoding/json"
+	"net/http"
+	"strconv"
+
 	"github.com/LimeChain/merkletree"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/render"
-	"net/http"
-	"strconv"
 )
 
 // MerkleTreeStatus takes pointer to initialized router and the merkle tree and exposes Rest API routes for getting of status
-func MerkleTreeStatus(treeRouter *chi.Mux, tree merkletree.ExternalMerkleTree) *chi.Mux {
+func MerkleTreeStatus(treeRouter chi.Router, tree merkletree.ExternalMerkleTree) chi.Router {
 	treeRouter.Get("/", getTreeStatus(tree))
 	return treeRouter
 }
 
 // MerkleTreeHashes takes pointer to initialized router and the merkle tree and exposes Rest API routes for getting of intermediary hashes
-func MerkleTreeHashes(treeRouter *chi.Mux, tree merkletree.ExternalMerkleTree) *chi.Mux {
+func MerkleTreeHashes(treeRouter chi.Router, tree merkletree.ExternalMerkleTree) chi.Router {
 	treeRouter.Get("/hashes/{index}", getIntermediaryHashesHandler(tree))
 	return treeRouter
 }
 
 // MerkleTreeInsert takes pointer to initialized router and the merkle tree and exposes Rest API routes for addition
-func MerkleTreeInsert(treeRouter *chi.Mux, tree merkletree.ExternalMerkleTree) *chi.Mux {
+func MerkleTreeInsert(treeRouter chi.Router, tree merkletree.ExternalMerkleTree) chi.Router {
 	treeRouter.Post("/", addDataHandler(tree))
 	return treeRouter
 }
