@@ -23,7 +23,13 @@ func MerkleTreeHashes(treeRouter *chi.Mux, tree merkletree.ExternalMerkleTree) *
 
 // MerkleTreeInsert takes pointer to initialized router and the merkle tree and exposes Rest API routes for addition
 func MerkleTreeInsert(treeRouter *chi.Mux, tree merkletree.ExternalMerkleTree) *chi.Mux {
-	treeRouter.Post("/", addDataHandler(tree))
+	treeRouter.Post("/", addDataHandler(tree, true))
+	return treeRouter
+}
+
+// MerkleTreeRawInsert takes pointer to initialized router and the merkle tree and exposes Rest API routes for addition without recalculating
+func MerkleTreeRawInsert(treeRouter *chi.Mux, tree merkletree.ExternalMerkleTree) *chi.Mux {
+	treeRouter.Post("/raw", addDataHandler(tree, false))
 	return treeRouter
 }
 
@@ -80,7 +86,7 @@ type addDataResponse struct {
 	Hash  string `json:"hash,omitempty"`
 }
 
-func addDataHandler(tree merkletree.ExternalMerkleTree) http.HandlerFunc {
+func addDataHandler(tree merkletree.ExternalMerkleTree, recalculate bool) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		decoder := json.NewDecoder(r.Body)
 		var b addDataRequest
@@ -94,7 +100,13 @@ func addDataHandler(tree merkletree.ExternalMerkleTree) http.HandlerFunc {
 			render.JSON(w, r, addDataResponse{MerkleAPIResponse{false, "Missing data field"}, -1, ""})
 			return
 		}
-		index, hash := tree.Add([]byte(b.Data))
+		var index int
+		var hash string
+		if recalculate {
+			index, hash = tree.Add([]byte(b.Data))
+		} else {
+			index, hash = tree.RawAdd([]byte(b.Data))
+		}
 		render.JSON(w, r, addDataResponse{MerkleAPIResponse{true, ""}, index, hash})
 	}
 }

@@ -168,9 +168,18 @@ func (tree *MerkleTree) Add(data []byte) (index int, hash string) {
 	return index, h.Hex()
 }
 
+// RawAdd adds data to the tree without recalculating the tree
+// Returns the index of the leaf and the node
+func (tree *MerkleTree) RawAdd(data []byte) (index int, hash string) {
+	h := crypto.Keccak256Hash(data)
+	index, _ = tree.RawInsert(h.Hex())
+	return index, h.Hex()
+}
+
 // RawInsert creates node out of the hash and pushes it into the tree without recalculating the tree
 // Returns the index of the leaf and the node
 func (tree *MerkleTree) RawInsert(hash string) (index int, insertedLeaf merkletree.Node) {
+	tree.Mutex.RLock()
 	index = len(tree.Nodes[0])
 
 	leaf := &Node{
@@ -180,6 +189,7 @@ func (tree *MerkleTree) RawInsert(hash string) (index int, insertedLeaf merkletr
 	}
 
 	tree.Nodes[0] = append(tree.Nodes[0], leaf)
+	tree.Mutex.RUnlock()
 
 	return index, leaf
 }
