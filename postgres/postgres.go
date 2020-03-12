@@ -29,6 +29,14 @@ func (tree *PostgresMerkleTree) Add(data []byte) (index int, hash string) {
 	return index, hash
 }
 
+func (tree *PostgresMerkleTree) RawAdd(data []byte) (index int, hash string) {
+	tree.mutex.Lock()
+	index, hash = tree.FullMerkleTree.RawAdd(data)
+	tree.addHashToDB(hash)
+	tree.mutex.Unlock()
+	return index, hash
+}
+
 func (tree *PostgresMerkleTree) addHashToDB(hash string) {
 	_, err := tree.db.Exec(InsertQuery, hash)
 	if err != nil {
